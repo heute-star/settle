@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip Split</title>
+<style>
+:root{
+  --blue:#1f4fd1; --blue-dark:#173c9e; --blue-soft:#eef3ff; --line:#dde5f4;
+  --text:#14213d; --muted:#6b7a93; --bg:#f6f8fd; --red:#c0362c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--blue);color:#fff}
+.bar{max-width:1120px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header input.title{flex:1;min-width:180px;background:transparent;border:1px solid transparent;color:#fff;font:inherit;font-size:20px;font-weight:600;padding:6px 8px;border-radius:8px}
+header input.title:hover,header input.title:focus{border-color:rgba(255,255,255,.45);outline:none;background:rgba(255,255,255,.08)}
+input.title::placeholder{color:rgba(255,255,255,.75)}
+.ghost{background:#fff;color:var(--blue);border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.notice{max-width:1088px;margin:12px auto 0;padding:10px 14px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:8px;color:var(--muted);font-size:13px}
+@media (max-width:1120px){.notice{margin:12px 16px 0}}
+main{max-width:1120px;margin:16px auto 32px;padding:0 16px;display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.col{display:grid;gap:16px;min-width:0}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card h2{margin:0 0 12px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--text);background:#fff}
+input[type=text]:focus{outline:2px solid var(--blue-soft);border-color:var(--blue)}
+.row{display:flex;gap:8px}
+.row>input{flex:1}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--blue-dark)}
+.btn.light{background:var(--blue-soft);color:var(--blue)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:999px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.chip.all{border-style:dashed;color:var(--blue)}
+.hint{font-size:13px;color:var(--muted);margin-top:8px}
+.actions{display:flex;gap:8px;margin-top:14px}
+.actions .btn{flex:1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font-size:22px;color:var(--blue);margin-top:2px}
+.stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.scroll{max-height:290px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.num{text-align:right;white-space:nowrap}
+.sub{color:var(--muted);font-size:12px}
+.link{background:none;border:0;color:var(--blue);cursor:pointer;font:inherit;font-size:13px;padding:0 4px}
+.link.del{color:var(--red)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+.transfer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:8px;background:var(--blue-soft);margin-bottom:8px}
+.transfer b{color:var(--blue)}
+.pos{color:var(--blue);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.member{display:inline-flex;align-items:center;gap:2px;background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:4px 6px 4px 11px;font-size:13px}
+.member button{border:0;background:none;color:var(--blue);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <input id="title" class="title" type="text" placeholder="Name your trip" maxlength="60" aria-label="Trip name">
+  <button id="share" class="ghost">Copy link</button>
+</div></header>
+<div id="notice" class="notice" hidden></div>
+
+<main>
+  <div class="col">
+    <section class="card">
+      <h2 id="formTitle">Add expense</h2>
+      <label for="payer">Who paid</label>
+      <input id="payer" type="text" list="peopleList" placeholder="Your name" autocomplete="off" maxlength="30">
+      <datalist id="peopleList"></datalist>
+      <label for="amount">Amount</label>
+      <input id="amount" type="text" inputmode="decimal" placeholder="0.00">
+      <label for="desc">Description</label>
+      <input id="desc" type="text" placeholder="Dinner, taxi, groceries" maxlength="80">
+      <label>Split between</label>
+      <div id="splitChips" class="chips"></div>
+      <div id="splitHint" class="hint"></div>
+      <div class="actions">
+        <button id="cancel" class="btn light" hidden>Cancel</button>
+        <button id="save" class="btn">Add expense</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>People</h2>
+      <div class="row">
+        <input id="newMember" type="text" placeholder="Add a name" maxlength="30">
+        <button id="addMember" class="btn">Add</button>
+      </div>
+      <div id="members" class="chips" style="margin-top:10px"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <div class="stats">
+      <div class="stat"><span>Total</span><b id="sTotal">0</b></div>
+      <div class="stat"><span>People</span><b id="sPeople">0</b></div>
+      <div class="stat"><span>Average each</span><b id="sAvg">0</b></div>
+    </div>
+
+    <section class="card">
+      <h2>Expenses</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Description</th><th>Paid by</th><th class="num">Amount</th><th></th></tr></thead>
+          <tbody id="expenses"></tbody>
+        </table>
+      </div>
+      <div id="noExp" class="empty">No expenses yet. Add the first one on the left.</div>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <h2>Who pays whom</h2>
+        <div id="transfers"></div>
+      </section>
+      <section class="card">
+        <h2>Balances</h2>
+        <table>
+          <thead><tr><th>Name</th><th class="num">Paid</th><th class="num">Share</th><th class="num">Balance</th></tr></thead>
+          <tbody id="balances"></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+</main>
+<div id="toast" class="toast"></div>
+
+<script type="module">
+/* SETUP: paste your Firebase web config below to share data between everyone.
+   With apiKey left empty the app runs in preview mode (data stays in this browser). */
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  appId: ""
+};
+const CURRENCY = "EUR";
+
+const params = new URLSearchParams(location.search);
+const tripId = (params.get("trip") || "main").replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || "main";
+const $ = id => document.getElementById(id);
+const money = new Intl.NumberFormat(undefined, { style: "currency", currency: CURRENCY });
+const fmt = cents => money.format(cents / 100);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clean = s => String(s || "").trim().replace(/\s+/g, " ").slice(0, 30);
+const toCents = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? Math.round(n * 100) : 0; };
+
+function showNotice(text) { $("notice").textContent = text; $("notice").hidden = false; }
+let toastTimer;
+function toast(text) {
+  $("toast").textContent = text; $("toast").classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").classList.remove("show"), 1800);
+}
+
+/* Storage: Firebase Realtime Database when configured, otherwise this browser only */
+function setPath(obj, path, val) {
+  let cur = obj;
+  for (let i = 0; i < path.length - 1; i++) { cur[path[i]] = cur[path[i]] || {}; cur = cur[path[i]]; }
+  if (val === null) delete cur[path[path.length - 1]]; else cur[path[path.length - 1]] = val;
+}
+function localStore() {
+  const KEY = "tripsplit_" + tripId;
+  const subs = [];
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  let mem = read();
+  window.addEventListener("storage", e => { if (e.key === KEY) { mem = read(); subs.forEach(f => f(mem)); } });
+  return {
+    subscribe(fn) { subs.push(fn); fn(mem); },
+    put(path, val) {
+      setPath(mem, path, val);
+      try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch {}
+      subs.forEach(f => f(mem));
+    },
+    newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  };
+}
+async function firebaseStore() {
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const { getDatabase, ref, onValue, set, remove, push } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+  const db = getDatabase(initializeApp(FIREBASE_CONFIG));
+  const base = "trips/" + tripId;
+  return {
+    subscribe(fn) { onValue(ref(db, base), snap => fn(snap.val() || {}), err => showNotice("Connection problem: " + err.message)); },
+    put(path, val) { const r = ref(db, base + "/" + path.join("/")); return (val === null ? remove(r) : set(r, val)).catch(err => toast("Not saved: " + err.message)); },
+    newId() { return push(ref(db, base + "/expenses")).key; }
+  };
+}
+
+let store;
+if (FIREBASE_CONFIG.apiKey) {
+  try { store = await firebaseStore(); }
+  catch (e) { console.error(e); store = localStore(); showNotice("Could not reach the shared database, so changes are only saved in this browser."); }
+} else {
+  store = localStore();
+  showNotice("Preview mode: data is saved only in this browser. Add your Firebase config in index.html to share it with everyone.");
+}
+
+/* State */
+let state = { title: "", members: {}, expenses: {} };
+let editingId = null;
+let splitAll = true;
+let picked = new Set();
+
+function names() {
+  const set = new Set(Object.values(state.members));
+  Object.values(state.expenses).forEach(e => { set.add(e.payer); e.split.forEach(n => set.add(n)); });
+  return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b));
+}
+function canonical(name) {
+  const n = clean(name);
+  if (!n) return "";
+  return names().find(x => x.toLowerCase() === n.toLowerCase()) || n;
+}
+function ensureMember(name) {
+  if (!Object.values(state.members).some(x => x.toLowerCase() === name.toLowerCase())) {
+    store.put(["members", store.newId()], name);
+  }
+}
+function expenseList() {
+  return Object.entries(state.expenses).map(([id, e]) => ({ id, ...e }))
+    .filter(e => e.cents > 0 && e.payer && e.split.length)
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+}
+
+/* Math, all in cents so totals always match exactly */
+function compute(list, people) {
+  const b = {};
+  people.forEach(n => b[n] = { paid: 0, share: 0 });
+  list.forEach(e => {
+    b[e.payer] = b[e.payer] || { paid: 0, share: 0 };
+    b[e.payer].paid += e.cents;
+    const k = e.split.length, base = Math.floor(e.cents / k);
+    let rest = e.cents - base * k;
+    e.split.forEach(n => {
+      b[n] = b[n] || { paid: 0, share: 0 };
+      b[n].share += base + (rest > 0 ? 1 : 0);
+      rest--;
+    });
+  });
+  return b;
+}
+function settle(b) {
+  const cred = [], debt = [];
+  for (const [n, v] of Object.entries(b)) {
+    const x = v.paid - v.share;
+    if (x > 0) cred.push([n, x]); else if (x < 0) debt.push([n, -x]);
+  }
+  cred.sort((a, c) => c[1] - a[1]); debt.sort((a, c) => c[1] - a[1]);
+  const out = []; let i = 0, j = 0;
+  while (i < debt.length && j < cred.length) {
+    const amt = Math.min(debt[i][1], cred[j][1]);
+    out.push({ from: debt[i][0], to: cred[j][0], cents: amt });
+    debt[i][1] -= amt; cred[j][1] -= amt;
+    if (!debt[i][1]) i++;
+    if (!cred[j][1]) j++;
+  }
+  return out;
+}
+
+/* Form */
+function splitList() {
+  const list = new Set(picked);
+  const p = canonical($("payer").value);
+  if (splitAll && p) list.add(p);
+  return [...list];
+}
+function updateHint() {
+  const n = splitList().length;
+  const cents = toCents($("amount").value);
+  $("splitHint").textContent = n === 0
+    ? (names().length ? "Pick at least one person." : "Everyone you add will appear here.")
+    : `Divided by ${n} ${n === 1 ? "person" : "people"}${cents > 0 ? ", about " + fmt(Math.round(cents / n)) + " each" : ""}.`;
+}
+function renderSplit() {
+  const all = names();
+  if (splitAll) picked = new Set(all);
+  $("splitChips").innerHTML = all.length
+    ? all.map(n => `<button type="button" class="chip ${picked.has(n) ? "on" : ""}" data-n="${esc(n)}">${esc(n)}</button>`).join("")
+      + `<button type="button" class="chip all" data-all="1">${picked.size === all.length ? "Clear" : "Everyone"}</button>`
+    : "";
+  updateHint();
+}
+function resetForm() {
+  editingId = null; splitAll = true;
+  $("amount").value = ""; $("desc").value = "";
+  $("formTitle").textContent = "Add expense";
+  $("save").textContent = "Add expense";
+  $("cancel").hidden = true;
+  renderSplit();
+}
+function startEdit(id) {
+  const e = state.expenses[id];
+  if (!e) return;
+  editingId = id; splitAll = false;
+  $("payer").value = e.payer;
+  $("amount").value = (e.cents / 100).toFixed(2);
+  $("desc").value = e.desc || "";
+  picked = new Set(e.split);
+  $("formTitle").textContent = "Edit expense";
+  $("save").textContent = "Save changes";
+  $("cancel").hidden = false;
+  renderSplit();
+  $("amount").focus();
+}
+function saveExpense() {
+  const payer = canonical($("payer").value);
+  const cents = toCents($("amount").value);
+  const split = splitList();
+  if (!payer) return toast("Add who paid.");
+  if (cents <= 0) return toast("Add an amount.");
+  if (!split.length) return toast("Pick who shares this expense.");
+  const wasEditing = !!editingId;
+  const id = editingId || store.newId();
+  const ts = wasEditing ? state.expenses[id]?.ts || Date.now() : Date.now();
+  ensureMember(payer);
+  store.put(["expenses", id], { payer, cents, desc: $("desc").value.trim().slice(0, 80), split, ts });
+  toast(wasEditing ? "Changes saved" : "Expense added");
+  resetForm();
+}
+
+/* Render everything */
+function render() {
+  const list = expenseList();
+  const people = names();
+  const total = list.reduce((s, e) => s + e.cents, 0);
+
+  if (document.activeElement !== $("title")) $("title").value = state.title;
+  document.title = state.title ? state.title + " | Trip Split" : "Trip Split";
+
+  $("sTotal").textContent = fmt(total);
+  $("sPeople").textContent = people.length;
+  $("sAvg").textContent = fmt(people.length ? Math.round(total / people.length) : 0);
+
+  $("peopleList").innerHTML = people.map(n => `<option value="${esc(n)}">`).join("");
+  $("members").innerHTML = people.length
+    ? people.map(n => `<span class="member">${esc(n)}<button title="Remove" data-rm="${esc(n)}">&times;</button></span>`).join("")
+    : `<span class="empty">Add everyone who joined the trip.</span>`;
+
+  $("expenses").innerHTML = list.map(e => `
+    <tr>
+      <td>${esc(e.desc || "Expense")}<div class="sub">Split by ${e.split.length}: ${esc(e.split.join(", "))}</div></td>
+      <td>${esc(e.payer)}</td>
+      <td class="num">${fmt(e.cents)}</td>
+      <td class="num"><button class="link" data-edit="${esc(e.id)}">Edit</button><button class="link del" data-del="${esc(e.id)}">Delete</button></td>
+    </tr>`).join("");
+  $("noExp").hidden = list.length > 0;
+
+  const bal = compute(list, people);
+  const moves = settle(bal);
+  $("transfers").innerHTML = !list.length
+    ? `<div class="empty">Nothing to settle yet.</div>`
+    : moves.length
+      ? moves.map(m => `<div class="transfer"><span><b>${esc(m.from)}</b> pays <b>${esc(m.to)}</b></span><b>${fmt(m.cents)}</b></div>`).join("")
+      : `<div class="empty">Everyone is even.</div>`;
+
+  $("balances").innerHTML = Object.entries(bal).sort((a, b) => a[0].localeCompare(b[0])).map(([n, v]) => {
+    const x = v.paid - v.share;
+    const cell = x > 0 ? `<span class="pos">gets ${fmt(x)}</span>` : x < 0 ? `<span class="neg">owes ${fmt(-x)}</span>` : `<span class="sub">even</span>`;
+    return `<tr><td>${esc(n)}</td><td class="num">${fmt(v.paid)}</td><td class="num">${fmt(v.share)}</td><td class="num">${cell}</td></tr>`;
+  }).join("") || `<tr><td colspan="4" class="empty">No one yet.</td></tr>`;
+
+  renderSplit();
+}
+
+/* Events */
+$("save").addEventListener("click", saveExpense);
+$("cancel").addEventListener("click", resetForm);
+["payer", "amount"].forEach(id => $(id).addEventListener("input", updateHint));
+["amount", "desc"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") saveExpense(); }));
+
+$("splitChips").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  const all = names();
+  if (b.dataset.all) {
+    splitAll = picked.size !== all.length;
+    picked = splitAll ? new Set(all) : new Set();
+  } else {
+    const n = b.dataset.n;
+    picked.has(n) ? picked.delete(n) : picked.add(n);
+    splitAll = all.every(x => picked.has(x));
+  }
+  renderSplit();
+});
+
+function addMember() {
+  const n = canonical($("newMember").value);
+  if (!n) return;
+  ensureMember(n);
+  $("newMember").value = "";
+}
+$("addMember").addEventListener("click", addMember);
+$("newMember").addEventListener("keydown", e => { if (e.key === "Enter") addMember(); });
+
+$("members").addEventListener("click", e => {
+  const name = e.target.closest("button")?.dataset.rm;
+  if (!name) return;
+  const used = Object.values(state.expenses).some(x => x.payer === name || x.split.includes(name));
+  if (used) return toast("This person is part of an expense. Edit or delete it first.");
+  const key = Object.keys(state.members).find(k => state.members[k] === name);
+  if (key) store.put(["members", key], null);
+});
+
+$("expenses").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.edit) startEdit(b.dataset.edit);
+  if (b.dataset.del && confirm("Delete this expense?")) {
+    if (editingId === b.dataset.del) resetForm();
+    store.put(["expenses", b.dataset.del], null);
+  }
+});
+
+$("title").addEventListener("change", () => store.put(["title"], $("title").value.trim().slice(0, 60) || null));
+$("share").addEventListener("click", () => {
+  navigator.clipboard.writeText(location.href).then(() => toast("Link copied"), () => toast(location.href));
+});
+
+/* Live updates */
+store.subscribe(data => {
+  const expenses = {};
+  for (const [id, e] of Object.entries(data.expenses || {})) {
+    if (!e) continue;
+    const split = (Array.isArray(e.split) ? e.split : Object.values(e.split || {})).filter(Boolean);
+    expenses[id] = { ...e, cents: Number(e.cents) || 0, split };
+  }
+  state = { title: data.title || "", members: data.members || {}, expenses };
+  if (editingId && !expenses[editingId]) resetForm();
+  render();
+});
+</script>
+</body>
+</html>
